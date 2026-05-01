@@ -1,0 +1,36 @@
+{
+  "name": "holographic-opencode-plugin",
+  "version": "1.0.0",
+  "description": "Native OpenCode plugin for holographic memory with HRR retrieval",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "holographic-memory",
+    "hrr",
+    "memory"
+  ],
+  "author": "tw2818",
+  "license": "MIT",
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.14.29",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.14.29",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3"
+  }
+}
