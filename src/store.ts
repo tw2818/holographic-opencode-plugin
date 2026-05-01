@@ -1,5 +1,5 @@
 import type { Fact } from "./types.js";
-import { encode_fact, phases_to_bytes, bytes_to_phases, bundle, snr_estimate, similarity } from "./hrr.js";
+import { encode_fact, phases_to_bytes, bytes_to_phases, bundle, snr_estimate } from "./hrr.js";
 import { Database } from "bun:sqlite";
 import { mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
