@@ -169,12 +169,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     if (isSummarizing) return false;
     if (buffer.size() === 0) return false;
     if (messageCount < (config.messageThreshold || 5)) return false;
-
-    // Heuristic: last entries are user messages (conversation paused)
-    const recent = buffer.getAll().slice(-3);
-    const userMessages = recent.filter(e => e.type === "user");
-    if (userMessages.length < 2) return false;
-
     return true;
   }
 
