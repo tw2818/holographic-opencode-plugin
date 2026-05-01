@@ -219,7 +219,8 @@ export class MemoryStore {
     let facts: Fact[] = [];
     const trimmed = query?.trim() ?? "";
 
-    const categoryClause = category ? "AND f.category = ?" : "";
+    const ftsCategoryClause = category ? "AND f.category = ?" : "";
+    const likeCategoryClause = category ? "AND category = ?" : "";
     const baseParams: (string | number)[] = [];
     if (category) baseParams.push(category);
 
@@ -232,7 +233,7 @@ export class MemoryStore {
         FROM facts f
         JOIN facts_fts fts ON f.fact_id = fts.rowid
         WHERE facts_fts MATCH ?
-          ${categoryClause}
+          ${ftsCategoryClause}
           AND f.trust_score >= ?
         ORDER BY fts.rank, f.trust_score DESC
         LIMIT ?
@@ -251,7 +252,7 @@ export class MemoryStore {
                retrieval_count, helpful_count, created_at, updated_at
         FROM facts
         WHERE content LIKE ?
-          ${categoryClause}
+          ${likeCategoryClause}
           AND trust_score >= ?
         ORDER BY trust_score DESC
         LIMIT ?

@@ -2,6 +2,7 @@ import { MemoryStore } from "./store.js";
 import {
   encode_text,
   encode_atom,
+  encode_fact,
   bind,
   unbind,
   similarity,
@@ -75,7 +76,7 @@ export class FactRetriever {
     });
 
     // Step 3: HRR ranking
-    const queryVec = encode_text(query, DIM_DEFAULT);
+    const queryVec = encode_fact(query, [], DIM_DEFAULT);
     const factVectors = this.store.get_facts_with_vectors(ftsIds);
     const hrrScores = new Map<number, { score: number; rank: number }>();
 
@@ -141,16 +142,6 @@ export class FactRetriever {
    * Probe memory bank for facts related to an entity using HRR unbinding.
    */
   probe(entity: string, category?: string, limit = 10): RetrievalResult[] {
-    // If no category specified, try each bank until one matches
-    if (!category) {
-      const categories = ["preferences", "facts", "lessons", "projects"];
-      for (const cat of categories) {
-        const result = this.probe(entity, cat, limit);
-        if (result.length > 0) return result;
-      }
-      return [];
-    }
-
     // Step 1: Encode entity as HRR atom
     const entityVec = encode_atom(entity, DIM_DEFAULT);
 
@@ -158,8 +149,8 @@ export class FactRetriever {
     const roleEntity = encode_atom(ROLE_ENTITY, DIM_DEFAULT);
     const probeKey = bind(entityVec, roleEntity);
 
-    // Step 4: Get facts in category and compute similarity scores
-    const facts = this.store.list_facts(category, 0.0, 100);
+    // Step 4: Get facts and compute similarity scores
+    const facts = this.store.list_facts(undefined, 0.0, 100);
     if (facts.length === 0) {
       return [];
     }
@@ -180,8 +171,8 @@ export class FactRetriever {
       const residual = unbind(factVec, probeKey);
 
       // Bind encoded content with role to create content vector
-      const contentVec = encode_text(fact.content, DIM_DEFAULT);
-      const boundContent = bind(contentVec, roleContent);
+      const contentAtom = encode_atom(fact.content, DIM_DEFAULT);
+      const boundContent = bind(contentAtom, roleContent);
 
       // Compute similarity between residual and bound content
       const sim = similarity(residual, boundContent);
@@ -245,8 +236,8 @@ export class FactRetriever {
         const residual = unbind(factVec, probeKey);
 
         // Create content vector bound to role
-        const contentVec = encode_text(fact.content, DIM_DEFAULT);
-        const boundContent = bind(contentVec, roleContent);
+        const contentAtom = encode_atom(fact.content, DIM_DEFAULT);
+        const boundContent = bind(contentAtom, roleContent);
 
         // Compute similarity
         const sim = similarity(residual, boundContent);

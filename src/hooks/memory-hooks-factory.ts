@@ -310,7 +310,8 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
 
       // Inject relevant memory into context
       try {
-        const facts = store.list_facts(undefined, 0.3, 3);
+        const bufferText = buffer.getAll().map(e => e.text).join(" ");
+        const facts = bufferText ? store.search_facts(bufferText, undefined, 0.3, 3) : store.list_facts(undefined, 0.3, 3);
         if (facts.length > 0) {
           output.context.push(
             `=== Relevant Memory ===\n${facts.map((f) => f.content).join("\n")}`
