@@ -165,33 +165,19 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     return { providerID: parts[0], modelID: parts[1] };
   }
 
-  async function shouldSummarizeNow(sessionID: string, directory: string): Promise<boolean> {
+  function shouldSummarizeNow(): boolean {
     if (!config.enabled) return false;
     if (isSummarizing) return false;
     if (buffer.size() === 0) return false;
     if (messageCount < (config.messageThreshold || 5)) return false;
 
-    try {
-      const entries = buffer.getAll();
-      const recent = entries.map(e => `[${e.type}] ${e.text.substring(0, 200)}`).join("\n");
-      const modelOverride = getModelOverride();
-      const response = await client.session.prompt({
-        path: { id: sessionID },
-        body: {
-          ...(modelOverride ? { model: modelOverride } : {}),
-      tools: {},
-      parts: [{ type: "text", text: `Is this conversation at a natural stopping point to summarize and extract key facts? Answer ONLY YES or NO.\n\n${recent}` }],
-    },
-    query: { directory },
-  });
+    // Heuristic: last entries are user messages (conversation paused)
+    const recent = buffer.getAll().slice(-3);
+    const userMessages = recent.filter(e => e.type === "user");
+    if (userMessages.length < 2) return false;
 
-  const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
-  const answer = textParts.map((p: any) => p.text).join("").trim().toUpperCase();
-  return answer.includes("YES");
-} catch {
-  return false;
-}
-}
+    return true;
+  }
 
   async function triggerSummarization(sessionID: string, directory: string) {
     if (isSummarizing) return;
@@ -303,7 +289,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
       // LLM decides if it's time to summarize
       const sessionID = msgInput.sessionID;
       const directory = (input as any).directory || process.cwd();
-      if (await shouldSummarizeNow(sessionID, directory)) {
+      if (shouldSummarizeNow()) {
         triggerSummarization(sessionID, directory);
       }
     },
