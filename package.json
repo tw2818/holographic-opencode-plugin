@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "scripts": {
@@ -26,15 +30,12 @@
   ],
   "author": "tw2818",
   "license": "MIT",
-  "dependencies": {
-    "better-sqlite3": "^11.0.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.14.29"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.14.29",
-    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.3"
   }

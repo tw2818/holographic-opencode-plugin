@@ -14,7 +14,7 @@ import { memoryHooks } from "./hooks/memory-hooks.js";
 
 export * from "./tools.js";
 
-export const plugin: Plugin = async () => ({
+const plugin: Plugin = async () => ({
   tool: {
     memory_search,
     memory_remember,
@@ -29,4 +29,4 @@ export const plugin: Plugin = async () => ({
   ...memoryHooks,
 });
 
-export default plugin;
+export default { server: plugin };

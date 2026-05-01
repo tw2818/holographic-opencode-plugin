@@ -1,6 +1,6 @@
 import type { Fact } from "./types.js";
 import { encode_fact, phases_to_bytes, bytes_to_phases, bundle, snr_estimate } from "./hrr.js";
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import { mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS memory_banks (
 `;
 
 export class MemoryStore {
-  private db: Database.Database;
+  private db: Database;
   private dim: number;
 
   constructor(dbPath?: string) {
@@ -97,8 +97,8 @@ export class MemoryStore {
     }
 
     this.db = new Database(resolvedPath);
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("foreign_keys = ON");
+    this.db.run("PRAGMA journal_mode = WAL");
+    this.db.run("PRAGMA foreign_keys = ON");
     this.dim = 1024;
 
     this.db.exec(SCHEMA);
@@ -138,7 +138,7 @@ export class MemoryStore {
     const result = this.db
       .prepare("INSERT INTO entities (name) VALUES (?)")
       .run(name);
-    return result.lastInsertRowid as number;
+    return Number(result.lastInsertRowid);
   }
 
   private link_entities(fact_id: number, entities: string[]): void {
@@ -200,7 +200,7 @@ export class MemoryStore {
       )
       .run(content, category, tags, Buffer.from(vector_bytes));
 
-    const fact_id = result.lastInsertRowid as number;
+    const fact_id = Number(result.lastInsertRowid);
 
     this.link_entities(fact_id, entities);
     this.rebuild_category_bank(category);
