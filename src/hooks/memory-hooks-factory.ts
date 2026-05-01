@@ -158,18 +158,34 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
   let messageCount = 0;
   let isSummarizing = false;
 
-  const COMPLETION_SIGNALS = /(done|完成了|完成|finished|搞定了|ok|好的|可以)\s*$/i;
-
-  function shouldSummarize(): boolean {
+  async function shouldSummarizeNow(sessionID: string, directory: string): Promise<boolean> {
     if (!config.enabled) return false;
     if (isSummarizing) return false;
     if (buffer.size() === 0) return false;
-    if (messageCount >= (config.messageThreshold || 5)) return true;
-    return false;
-  }
+    if (messageCount < (config.messageThreshold || 5)) return false;
 
-  function checkCompletionSignal(text: string): boolean {
-    return COMPLETION_SIGNALS.test(text.trim());
+    try {
+      const entries = buffer.getAll();
+      const recent = entries.map(e => `[${e.type}] ${e.text.substring(0, 200)}`).join("\n");
+      const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
+
+      const response = await client.session.prompt({
+        path: { id: sessionID },
+        body: {
+          model: { providerID, modelID },
+          agent: "default",
+          tools: {},
+          parts: [{ type: "text", text: `Is this conversation at a natural stopping point to summarize and extract key facts? Answer ONLY YES or NO.\n\n${recent}` }],
+        },
+        query: { directory },
+      });
+
+      const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
+      const answer = textParts.map((p: any) => p.text).join("").trim().toUpperCase();
+      return answer.includes("YES");
+    } catch {
+      return false;
+    }
   }
 
   async function triggerSummarization(sessionID: string, directory: string) {
@@ -281,14 +297,10 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
       });
       messageCount++;
 
-      // Trigger summarization on completion signals
-      if (checkCompletionSignal(text)) {
-        const sessionID = msgInput.sessionID;
-        const directory = (input as any).directory || process.cwd();
-        triggerSummarization(sessionID, directory);
-      } else if (shouldSummarize()) {
-        const sessionID = msgInput.sessionID;
-        const directory = (input as any).directory || process.cwd();
+      // LLM decides if it's time to summarize
+      const sessionID = msgInput.sessionID;
+      const directory = (input as any).directory || process.cwd();
+      if (await shouldSummarizeNow(sessionID, directory)) {
         triggerSummarization(sessionID, directory);
       }
     },
