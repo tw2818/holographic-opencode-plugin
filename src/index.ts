@@ -29,4 +29,4 @@ const plugin: Plugin = async () => ({
   ...memoryHooks,
 });
 
-export default { server: plugin };
+export default { id: "holographic-memory", server: plugin };
