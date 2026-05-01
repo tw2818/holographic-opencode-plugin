@@ -14,23 +14,11 @@ Native OpenCode plugin providing holographic memory with HRR (Holographic Reduce
 
 ## Installation
 
-### From GitHub (recommended)
-```bash
-opencode plugin tw2818/holographic-opencode-plugin
-```
-
-### From local clone
 ```bash
 git clone https://github.com/tw2818/holographic-opencode-plugin.git
 cd holographic-opencode-plugin
 npm install
-npm run build
-opencode plugin /path/to/holographic-opencode-plugin
-```
-
-### From npm (when published)
-```bash
-opencode plugin holographic-opencode-plugin
+opencode plugin "$(pwd)"
 ```
 
 ## Configuration
