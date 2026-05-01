@@ -2,6 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin";
 import {
   memory_search, memory_remember, memory_forget, memory_list,
   memory_profile, memory_probe, memory_feedback, memory_reason, memory_contradict,
+  memory_decay,
 } from "./tools.js";
 import { createMemoryHooks } from "./hooks/memory-hooks-factory.js";
 
@@ -12,6 +13,7 @@ const plugin: Plugin = async (input) => ({
   tool: {
     memory_search, memory_remember, memory_forget, memory_list,
     memory_profile, memory_probe, memory_feedback, memory_reason, memory_contradict,
+    memory_decay,
   },
   ...createMemoryHooks(input),
 });

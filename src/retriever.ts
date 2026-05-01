@@ -62,10 +62,16 @@ export class FactRetriever {
     // Step 2: Jaccard ranking
     const queryTokens = this.tokenize(query);
     const jaccardScores = new Map<number, { score: number; rank: number }>();
-    ftsCandidates.forEach((fact, idx) => {
+    const jaccardResults: { fact_id: number; score: number }[] = [];
+    ftsCandidates.forEach((fact) => {
       const factTokens = this.tokenize(fact.content + " " + fact.tags);
       const score = this.jaccard(queryTokens, factTokens);
-      jaccardScores.set(fact.fact_id, { score, rank: idx + 1 });
+      jaccardResults.push({ fact_id: fact.fact_id, score });
+    });
+    // Sort by Jaccard score descending for independent ranking
+    jaccardResults.sort((a, b) => b.score - a.score);
+    jaccardResults.forEach((r, idx) => {
+      jaccardScores.set(r.fact_id, { score: r.score, rank: idx + 1 });
     });
 
     // Step 3: HRR ranking
@@ -134,6 +140,16 @@ export class FactRetriever {
    * Probe memory bank for facts related to an entity using HRR unbinding.
    */
   probe(entity: string, category?: string, limit = 10): RetrievalResult[] {
+    // If no category specified, try each bank until one matches
+    if (!category) {
+      const categories = ["preferences", "facts", "lessons", "projects"];
+      for (const cat of categories) {
+        const result = this.probe(entity, cat, limit);
+        if (result.length > 0) return result;
+      }
+      return [];
+    }
+
     // Step 1: Get category memory bank vector
     const bankResult = this.store.get_category_bank(category);
     if (!bankResult) {

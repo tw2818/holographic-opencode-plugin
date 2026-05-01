@@ -38,7 +38,7 @@ function parseConfig(input: PluginInput): SummarizerConfig {
     summarizerModel: raw?.summarizerModel ?? DEFAULT_MODEL,
     bufferSize: raw?.bufferSize ?? DEFAULT_BUFFER_SIZE,
     messageThreshold: raw?.messageThreshold ?? DEFAULT_MESSAGE_THRESHOLD,
-    enabled: raw?.enabled ?? true,
+    enabled: raw?.enabled ?? false,
   };
 }
 

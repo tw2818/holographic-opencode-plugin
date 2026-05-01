@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS entities (
 );
 
 CREATE TABLE IF NOT EXISTS fact_entities (
-    fact_id   INTEGER REFERENCES facts(fact_id),
+    fact_id   INTEGER REFERENCES facts(fact_id) ON DELETE CASCADE,
     entity_id INTEGER REFERENCES entities(entity_id),
     PRIMARY KEY (fact_id, entity_id)
 );

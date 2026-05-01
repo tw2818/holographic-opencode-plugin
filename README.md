@@ -2,7 +2,7 @@
 
 [![GitHub Stars](https://img.shields.io/github/stars/tw2818/holographic-opencode-plugin)](https://github.com/tw2818/holographic-opencode-plugin)
 
-Native OpenCode plugin providing holographic memory with HRR (Holographic Reduced Representation) retrieval. **100% TypeScript - no Python required.**
+Native OpenCode plugin for persistent memory with FTS5 full-text search and HRR (Holographic Reduced Representation) vector reranking. **100% TypeScript - no Python required.**
 
 ## Features
 
