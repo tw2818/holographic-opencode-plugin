@@ -173,20 +173,19 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         path: { id: sessionID },
         body: {
           model: { providerID, modelID },
-          agent: "default",
-          tools: {},
-          parts: [{ type: "text", text: `Is this conversation at a natural stopping point to summarize and extract key facts? Answer ONLY YES or NO.\n\n${recent}` }],
-        },
-        query: { directory },
-      });
+      tools: {},
+      parts: [{ type: "text", text: `Is this conversation at a natural stopping point to summarize and extract key facts? Answer ONLY YES or NO.\n\n${recent}` }],
+    },
+    query: { directory },
+  });
 
-      const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
-      const answer = textParts.map((p: any) => p.text).join("").trim().toUpperCase();
-      return answer.includes("YES");
-    } catch {
-      return false;
-    }
-  }
+  const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
+  const answer = textParts.map((p: any) => p.text).join("").trim().toUpperCase();
+  return answer.includes("YES");
+} catch {
+  return false;
+}
+}
 
   async function triggerSummarization(sessionID: string, directory: string) {
     if (isSummarizing) return;
@@ -201,7 +200,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         path: { id: sessionID },
         body: {
           model: { providerID, modelID },
-          agent: "default",
           tools: {},
           parts: [{ type: "text", text: prompt }],
         },
@@ -336,7 +334,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
               path: { id: sessionID },
               body: {
                 model: { providerID, modelID },
-                agent: "default",
                 tools: {},
                 parts: [{ type: "text", text: `Extract a focused keyword search query (max 10 words) from this conversation snippet. Return ONLY the query, no explanation:\n\n${recentText}` }],
               },
