@@ -87,11 +87,11 @@ ${existingBlock}
 Analyze, rewrite, and classify each fact:
 
 1. REWRITE each fact to be self-contained (no pronouns like "he", "it", "this" — replace with actual names/objects)
-2. CLASSIFY each fact into one category:
-   - "lessons": what was learned, how things were done
-   - "facts": technical details, paths, commands, configs, file names
-   - "preferences": user likes/dislikes, naming preferences, interaction style
-   - "projects": project status, milestones, next steps, blockers
+2. CLASSIFY each fact into a category:
+   - Prefer existing categories when they fit (you can see current ones in the stored facts above)
+   - Create new specific categories when needed (single lowercase word, e.g. "deployment", "bugs", "ui", "ci")
+   - Avoid overly generic categories like "general", "other", "misc"
+   - The JSON key for each fact can be ANY category name, not just the four examples below
 3. SCORE trust (0-1) for each fact:
    - 0.8-1.0: user explicitly stated this
    - 0.5-0.7: solid inference from conversation
@@ -99,19 +99,10 @@ Analyze, rewrite, and classify each fact:
 
 Return ONLY valid JSON, no other text:
 {
-  "lessons": [
-    {"content": "rewritten fact", "trust": 0.7}
-  ],
-  "facts": [
-    {"content": "rewritten fact", "trust": 0.6}
-  ],
-  "preferences": [
-    {"content": "user prefers X", "trust": 0.9}
-  ],
-  "projects": [
-    {"content": "project Y status", "trust": 0.8}
-  ],
-  "dedup": [
+  "lessons": [{"content": "rewritten fact", "trust": 0.7}],
+  "deployment": [{"content": "rewritten fact", "trust": 0.8}],
+  "bugs": [{"content": "rewritten fact", "trust": 0.6}],
+  "dedup": [...]
     {"action": "merge", "old_id": 5, "new_content": "merged fact text"},
     {"action": "replace", "old_id": 3, "reason": "why replacing"},
     {"action": "keep_existing", "old_id": 8, "reason": "why keeping old"}
