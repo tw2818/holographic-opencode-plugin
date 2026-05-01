@@ -6,10 +6,13 @@ Native OpenCode plugin providing holographic memory with HRR (Holographic Reduce
 
 ## Features
 
-- **9 Native Tools**: Direct plugin tools for memory operations
-- **Session Hooks**: Auto-extract facts on chat messages, compaction context injection
+- **9 Memory Tools**: Search, store, forget, list, profile, probe, feedback, reason, contradict
+- **Background Summarizer**: LLM-powered auto-summarization of conversations
 - **HRR Algebra**: Semantic encoding with bind/unbind/bundle operations
-- **RRF Fusion**: Combines FTS5 + Jaccard + HRR for hybrid retrieval
+- **RRF Fusion**: FTS5 + Jaccard + HRR for hybrid retrieval
+- **Auto-Maintenance**: Dedup, trust decay, conflict detection — LLM + code-level
+- **Dynamic Categories**: LLM creates categories freely based on content
+- **Confidence Scoring**: Facts scored 0.2-0.9 based on LLM confidence
 - **SQLite + FTS5**: Fast full-text search with vector similarity
 
 ## Installation
@@ -39,16 +42,28 @@ Plugin auto-installs via `opencode plugin` command. The database will be created
 | `memory_feedback` | Record helpful/unhelpful feedback |
 | `memory_reason` | Multi-entity AND reasoning |
 | `memory_contradict` | Find contradictory fact pairs |
+| `memory_decay` | Manual trust decay for stale facts |
 
 ## Session Hooks
 
-### Auto-Extract
-Automatically detects and stores facts from:
-- Chat messages matching patterns: "remember that X", "note that Y", "I prefer Z"
-- Tool executions that modify files or make commits
+- **Auto-Extract**: Detects "remember that X", "I prefer Y" patterns
+- **Background Summarizer**: Every 5 messages + completion signals, LLM auto-summarizes conversation
+- **Compaction Context**: Injects relevant memory before session compaction
 
-### Compaction Context
-Before session compaction, relevant memory is injected into context.
+## Configuration
+
+Optional config in `opencode.jsonc`:
+
+```jsonc
+"experimental": {
+  "holographicMemory": {
+    "summarizerModel": "minimax-cn/Minimax-M2.7-highspeed",
+    "bufferSize": 20,
+    "messageThreshold": 5,
+    "enabled": true
+  }
+}
+```
 
 ## Database
 

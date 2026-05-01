@@ -18,8 +18,7 @@
   "scripts": {
     "build": "tsc",
     "prepublish": "npm run build",
-    "install": "npm run build",
-    "migrate": "npx tsx scripts/migrate-to-opencode.ts"
+    "install": "npm run build"
   },
   "keywords": [
     "opencode",
