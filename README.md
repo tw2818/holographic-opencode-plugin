@@ -2,48 +2,48 @@
 
 [![GitHub Stars](https://img.shields.io/github/stars/tw2818/holographic-opencode-plugin)](https://github.com/tw2818/holographic-opencode-plugin)
 
-Native OpenCode plugin providing holographic memory with HRR (Holographic Reduced Representation) retrieval.
+Native OpenCode plugin providing holographic memory with HRR (Holographic Reduced Representation) retrieval. **100% TypeScript - no Python required.**
 
 ## Features
 
 - **9 Native Tools**: Direct plugin tools for memory operations
-- **Session Hooks**: Auto-extract facts on session end, compaction context injection
-- **Chat Interception**: Detect "remember that" patterns and auto-store
-- **Tool Hooks**: Auto-extract facts after significant tool executions
+- **Session Hooks**: Auto-extract facts on chat messages, compaction context injection
 - **HRR Algebra**: Semantic encoding with bind/unbind/bundle operations
 - **RRF Fusion**: Combines FTS5 + Jaccard + HRR for hybrid retrieval
+- **SQLite + FTS5**: Fast full-text search with vector similarity
 
 ## Installation
 
+### From npm (when published)
 ```bash
-npm install holographic-opencode-plugin
+opencode plugin holographic-opencode-plugin
 ```
 
-Or for local development:
+### From GitHub (latest)
+```bash
+opencode plugin tw2818/holographic-opencode-plugin
+```
 
+### Local development
 ```bash
 git clone https://github.com/tw2818/holographic-opencode-plugin.git
 cd holographic-opencode-plugin
 npm install
 npm run build
-npm link
-# Then in your opencode config directory:
-npm link holographic-opencode-plugin
+opencode plugin /path/to/holographic-opencode-plugin
 ```
 
 ## Configuration
 
-Add to your `opencode.jsonc`:
+Plugin auto-discovers. If needed, add to `~/.opencode/opencode.json`:
 
 ```json
 {
   "plugin": [
-    "holographic-opencode-plugin"
+    "/path/to/holographic-opencode-plugin"
   ]
 }
 ```
-
-The plugin communicates with the Python MCP backend via stdin/stdout. Ensure the Python MCP server is accessible.
 
 ## Tools
 
@@ -59,42 +59,30 @@ The plugin communicates with the Python MCP backend via stdin/stdout. Ensure the
 | `memory_reason` | Multi-entity AND reasoning |
 | `memory_contradict` | Find contradictory fact pairs |
 
-## Hooks
+## Session Hooks
 
-### Session Compaction
-Before session compaction, memory context is automatically prepended.
+### Auto-Extract
+Automatically detects and stores facts from:
+- Chat messages matching patterns: "remember that X", "note that Y", "I prefer Z"
+- Tool executions that modify files or make commits
 
-### Chat Message
-Detects patterns like "remember that X", "I prefer Y" and auto-stores.
+### Compaction Context
+Before session compaction, relevant memory is injected into context.
 
-### Tool Execute After
-After significant tools (edit, write, bash), extracts facts for storage.
+## Database
 
-## Architecture
+Data stored at: `~/.config/opencode/holographic_memory/memory_store.db`
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                  OpenCode Plugin System                     │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐ │
-│  │ Tool Defs   │  │ Session      │  │ Chat              │ │
-│  │ (9 native)  │  │ Hooks        │  │ Interceptors      │ │
-│  └─────────────┘  └──────────────┘  └───────────────────┘ │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ IPC (stdin/stdout)
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Python MCP Server                              │
-│  (holographic-mcp server.py)                              │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐ │
-│  │ HRR Algebra │  │ SQLite Store │  │ RRF Retrieval     │ │
-│  └─────────────┘  └──────────────┘  └───────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
+Schema:
+- `facts` - stored facts with HRR vectors
+- `entities` - extracted entities
+- `fact_entities` - fact-entity relationships
+- `facts_fts` - FTS5 full-text search virtual table
+- `memory_banks` - bundled category vectors
 
 ## Requirements
 
 - Node.js 18+
-- Python 3.11+
 - SQLite 3.35+ (FTS5)
 - OpenCode AI
 
