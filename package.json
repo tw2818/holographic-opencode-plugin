@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublish": "npm run build",
+    "migrate": "npx tsx scripts/migrate-to-opencode.ts"
   },
   "keywords": [
     "opencode",
@@ -24,12 +25,16 @@
   ],
   "author": "tw2818",
   "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.14.29",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.14.29",
+    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.3"
   }
