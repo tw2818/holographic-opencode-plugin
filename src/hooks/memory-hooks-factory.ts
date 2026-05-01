@@ -31,7 +31,7 @@ class CircularBuffer {
 }
 
 function parseConfig(input: PluginInput): SummarizerConfig {
-  const raw = (input as any).config?.holographicMemory as SummarizerConfig | undefined;
+  const raw = ((input as any).config?.experimental?.holographicMemory ?? {}) as SummarizerConfig;
   return {
     summarizerModel: raw?.summarizerModel ?? DEFAULT_MODEL,
     bufferSize: raw?.bufferSize ?? DEFAULT_BUFFER_SIZE,
