@@ -165,6 +165,13 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     return true;
   }
 
+  function getModelOverride(): { providerID: string; modelID: string } | undefined {
+    if (!config.summarizerModel) return undefined;
+    const p = config.summarizerModel.indexOf("/");
+    if (p <= 0) return undefined;
+    return { providerID: config.summarizerModel.substring(0, p), modelID: config.summarizerModel.substring(p + 1) };
+  }
+
   async function triggerSummarization(sessionID: string, directory: string) {
     if (isSummarizing) return;
     isSummarizing = true;
@@ -172,10 +179,12 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     try {
       const entries = buffer.getAll();
       const prompt = buildSummarizerPrompt(entries, store);
+      const modelOverride = getModelOverride();
 
       const response = await client.session.prompt({
         path: { id: sessionID },
         body: {
+          ...(modelOverride ? { model: modelOverride } : {}),
           tools: {},
           parts: [{ type: "text", text: prompt }],
         },
