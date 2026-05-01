@@ -158,9 +158,10 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
   let messageCount = 0;
   let isSummarizing = false;
 
-  function getModelOverride(): { providerID: string; modelID: string } {
-    const modelStr = config.summarizerModel || DEFAULT_MODEL;
-    const parts = modelStr.split("/", 2);
+  function getModelOverride(): { providerID: string; modelID: string } | undefined {
+    if (!config.summarizerModel) return undefined;
+    const parts = config.summarizerModel.split("/", 2);
+    if (!parts[0] || !parts[1]) return undefined;
     return { providerID: parts[0], modelID: parts[1] };
   }
 
