@@ -195,6 +195,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         path: { id: subSessionID },
         body: {
           ...(modelOverride ? { model: modelOverride } : {}),
+          tools: {},
           parts: [{ type: "text", text: prompt }],
         },
         query: { directory },
