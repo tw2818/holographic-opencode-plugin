@@ -181,7 +181,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         body: {
           parentID: parentSessionID,
           title: "memory-summarizer",
-          ...(modelOverride ? { model: modelOverride } : {}),
         },
         query: { directory },
       });
@@ -277,7 +276,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
           if (content.length > 3) {
             try { store.add_fact(content, category, "auto-extracted"); } catch {}
           }
-          break;
         }
       }
 
