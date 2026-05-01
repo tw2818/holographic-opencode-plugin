@@ -325,7 +325,6 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
 
       // Inject relevant memory into context
       try {
-        const recentEntries = buffer.getAll().slice(-5);
         const recentText = recentEntries.map(e => e.text).join("\n");
 
         let query = recentText;
