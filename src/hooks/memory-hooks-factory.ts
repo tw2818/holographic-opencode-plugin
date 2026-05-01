@@ -1,5 +1,6 @@
 import type { PluginInput, Hooks } from "@opencode-ai/plugin";
 import { MemoryStore } from "../store.js";
+import { FactRetriever } from "../retriever.js";
 import { encode_text, similarity } from "../hrr.js";
 import type { Fact } from "../types.js";
 
@@ -310,11 +311,37 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
 
       // Inject relevant memory into context
       try {
-        const bufferText = buffer.getAll().map(e => e.text).join(" ");
-        const facts = bufferText ? store.search_facts(bufferText, undefined, 0.3, 3) : store.list_facts(undefined, 0.3, 3);
-        if (facts.length > 0) {
+        const recentEntries = buffer.getAll().slice(-5);
+        const recentText = recentEntries.map(e => e.text).join("\n");
+
+        let query = recentText;
+        // LLM-extracted query for precision
+        if (recentText && client) {
+          try {
+            const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
+            const response = await client.session.prompt({
+              path: { id: sessionID },
+              body: {
+                model: { providerID, modelID },
+                agent: "default",
+                tools: {},
+                parts: [{ type: "text", text: `Extract a focused keyword search query (max 10 words) from this conversation snippet. Return ONLY the query, no explanation:\n\n${recentText}` }],
+              },
+              query: { directory },
+            });
+            const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
+            const extracted = textParts.map((p: any) => p.text).join("").trim();
+            if (extracted.length > 2 && extracted.length < 100) {
+              query = extracted;
+            }
+          } catch {}
+        }
+
+        const retriever = new FactRetriever(store);
+        const results = query ? retriever.search(query, undefined, 3) : [];
+        if (results.length > 0) {
           output.context.push(
-            `=== Relevant Memory ===\n${facts.map((f) => f.content).join("\n")}`
+            `=== Relevant Memory ===\n${results.map((r) => r.content).join("\n")}`
           );
         }
       } catch {}
