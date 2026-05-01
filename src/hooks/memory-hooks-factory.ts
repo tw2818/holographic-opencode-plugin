@@ -84,7 +84,7 @@ Return ONLY valid JSON, no other text:
   "lessons": [{"content": "rewritten fact", "trust": 0.7}],
   "deployment": [{"content": "rewritten fact", "trust": 0.8}],
   "bugs": [{"content": "rewritten fact", "trust": 0.6}],
-  "dedup": [...]
+  "dedup": [
     {"action": "merge", "old_id": 5, "new_content": "merged fact text"},
     {"action": "replace", "old_id": 3, "reason": "why replacing"},
     {"action": "keep_existing", "old_id": 8, "reason": "why keeping old"}
@@ -126,7 +126,13 @@ function parseSummarizerResponse(text: string): { facts: Array<{ content: string
   const match = cleaned.match(/\{[\s\S]*\}/);
   if (!match) return { facts: [], dedup: [] };
   
-  const parsed: SummarizerOutput = JSON.parse(match[0]);
+  let parsed: SummarizerOutput;
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch {
+    return { facts: [], dedup: [] };
+  }
+  
   const results: Array<{ content: string; category: string; trust: number }> = [];
   
   for (const [category, items] of Object.entries(parsed)) {
