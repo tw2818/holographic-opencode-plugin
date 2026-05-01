@@ -444,6 +444,19 @@ export class MemoryStore {
     return result;
   }
 
+  get_category_bank(category: string): { vector: Float64Array; fact_count: number } | null {
+    const row = this.db.prepare(
+      "SELECT vector, fact_count FROM memory_banks WHERE bank_name = ?"
+    ).get(category) as { vector: Buffer; fact_count: number } | undefined;
+
+    if (!row) return null;
+
+    return {
+      vector: bytes_to_phases(new Uint8Array(row.vector)),
+      fact_count: row.fact_count,
+    };
+  }
+
   close(): void {
     this.db.close();
   }

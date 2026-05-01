@@ -2,19 +2,19 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin";
 import { homedir } from "os";
 import { join } from "path";
 import { MemoryStore } from "./store.js";
-import { encode_fact, similarity as hrr_similarity } from "./hrr.js";
-import type { Fact } from "./types.js";
+import { FactRetriever } from "./retriever.js";
 
 const DB_PATH = join(homedir(), ".config", "opencode", "holographic_memory", "memory_store.db");
 let store: MemoryStore | null = null;
+let retriever: FactRetriever | null = null;
 
 function getStore(): MemoryStore {
   if (!store) store = new MemoryStore(DB_PATH);
   return store;
 }
-
-function format_fact(f: Fact): string {
-  return `[${f.fact_id}] (${f.category}, trust=${f.trust_score.toFixed(2)})\n  ${f.content}`;
+function getRetriever(): FactRetriever {
+  if (!retriever) retriever = new FactRetriever(getStore());
+  return retriever;
 }
 
 export const memory_search: ToolDefinition = tool({
@@ -29,14 +29,13 @@ export const memory_search: ToolDefinition = tool({
   },
   async execute(args) {
     try {
-      const facts = getStore().search_facts(
-        args.query,
-        args.category,
-        0.3,
-        args.limit || 10
-      );
-      if (facts.length === 0) return "No matching facts found.";
-      return facts.map(format_fact).join("\n\n");
+      const results = getRetriever().search(args.query, args.category, args.limit || 10);
+      if (results.length === 0) return "No matching facts found.";
+      return results
+        .map((r) =>
+          `[${r.fact_id}] (${r.category}, trust=${r.trust_score.toFixed(2)}, relevance=${r.relevance_score.toFixed(3)})\n  ${r.content}`
+        )
+        .join("\n\n");
     } catch (error) {
       return `Search error: ${error}`;
     }
@@ -92,7 +91,11 @@ export const memory_list: ToolDefinition = tool({
         args.limit || 50
       );
       if (facts.length === 0) return "No facts stored.";
-      return facts.map(format_fact).join("\n\n");
+      return facts
+        .map((f) =>
+          `[${f.fact_id}] (${f.category}, trust=${f.trust_score.toFixed(2)})\n  ${f.content}`
+        )
+        .join("\n\n");
     } catch (error) {
       return `Error listing facts: ${error}`;
     }
@@ -138,31 +141,11 @@ export const memory_probe: ToolDefinition = tool({
   },
   async execute(args) {
     try {
-      const store = getStore();
-      const entityVector = encode_fact(args.entity, [args.entity]);
-      const facts = store.list_facts(args.category, 0, 100);
-
-      const factIds = facts.map(f => f.fact_id);
-      const vectors = store.get_facts_with_vectors(factIds);
-
-      const scoredFacts: Array<{ fact: Fact; score: number }> = [];
-
-      for (const fact of facts) {
-        const factVector = vectors.get(fact.fact_id);
-        if (!factVector) continue;
-        const score = hrr_similarity(entityVector, factVector);
-        if (score > 0) {
-          scoredFacts.push({ fact, score });
-        }
-      }
-
-      scoredFacts.sort((a, b) => b.score - a.score);
-      const top = scoredFacts.slice(0, args.limit || 10);
-
-      if (top.length === 0) return "No probe results.";
-      return top
-        .map((item) =>
-          `[${item.fact.fact_id}] (${item.fact.category}, trust=${item.fact.trust_score.toFixed(2)})\n  ${item.fact.content}`
+      const results = getRetriever().probe(args.entity, args.category, args.limit || 10);
+      if (results.length === 0) return "No probe results.";
+      return results
+        .map((r) =>
+          `[${r.fact_id}] (${r.category}, trust=${r.trust_score.toFixed(2)}, relevance=${r.relevance_score.toFixed(3)})\n  ${r.content}`
         )
         .join("\n\n");
     } catch (error) {
@@ -197,24 +180,11 @@ export const memory_reason: ToolDefinition = tool({
   },
   async execute(args) {
     try {
-      const store = getStore();
-      const facts = store.list_facts(args.category, 0, 100);
-
-      const factsWithAllEntities = facts.filter((fact) => {
-        const content_lower = fact.content.toLowerCase();
-        return args.entities.every((entity) =>
-          content_lower.includes(entity.toLowerCase())
-        );
-      });
-
-      const sorted = factsWithAllEntities.sort((a, b) => b.trust_score - a.trust_score);
-      const top = sorted.slice(0, args.limit || 10);
-
-      if (top.length === 0) return "No reasoning results.";
-      return top
-        .map(
-          (f) =>
-            `[${f.fact_id}] (${f.category}, trust=${f.trust_score.toFixed(2)})\n  ${f.content}`
+      const results = getRetriever().reason(args.entities, args.category, args.limit || 10);
+      if (results.length === 0) return "No reasoning results.";
+      return results
+        .map((r) =>
+          `[${r.fact_id}] (${r.category}, trust=${r.trust_score.toFixed(2)}, relevance=${r.relevance_score.toFixed(3)})\n  ${r.content}`
         )
         .join("\n\n");
     } catch (error) {
@@ -232,40 +202,12 @@ export const memory_contradict: ToolDefinition = tool({
   },
   async execute(args) {
     try {
-      const store = getStore();
-      const facts = store.list_facts(args.category, 0.3, 50);
-      const threshold = args.threshold ?? 0.5;
-      const contradictingPairs: Array<{ fact1: Fact; fact2: Fact; combinedTrust: number }> = [];
-
-      function textSimilarity(a: string, b: string): number {
-        const aWords = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 2));
-        const bWords = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 2));
-        const intersection = new Set([...aWords].filter(x => bWords.has(x)));
-        const union = new Set([...aWords, ...bWords]);
-        return union.size > 0 ? intersection.size / union.size : 0;
-      }
-
-      for (let i = 0; i < facts.length; i++) {
-        for (let j = i + 1; j < facts.length; j++) {
-          const sim = textSimilarity(facts[i].content, facts[j].content);
-          if (sim < threshold && facts[i].trust_score >= 0.3 && facts[j].trust_score >= 0.3) {
-            contradictingPairs.push({
-              fact1: facts[i],
-              fact2: facts[j],
-              combinedTrust: facts[i].trust_score + facts[j].trust_score,
-            });
-          }
-        }
-      }
-
-      contradictingPairs.sort((a, b) => b.combinedTrust - a.combinedTrust);
-      const top = contradictingPairs.slice(0, args.limit || 10);
-
-      if (top.length === 0) return "No contradictions found.";
-      return top
+      const pairs = getRetriever().contradict(args.category, args.threshold ?? 0.5, args.limit || 10);
+      if (pairs.length === 0) return "No contradictions found.";
+      return pairs
         .map(
           (p) =>
-            `[${p.fact1.fact_id}] vs [${p.fact2.fact_id}]\n  A: ${p.fact1.content.substring(0, 60)}\n  B: ${p.fact2.content.substring(0, 60)}`
+            `[${p.fact1.fact_id}] vs [${p.fact2.fact_id}] (score=${p.contradiction_score.toFixed(3)})\n  A: ${p.fact1.content.substring(0, 60)}\n  B: ${p.fact2.content.substring(0, 60)}`
         )
         .join("\n\n");
     } catch (error) {
