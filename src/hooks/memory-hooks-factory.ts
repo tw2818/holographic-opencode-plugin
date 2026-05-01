@@ -34,13 +34,13 @@ class CircularBuffer {
 }
 
 function getConfig(): SummarizerConfig {
-  return {
-    summarizerModel: DEFAULT_MODEL,
-    bufferSize: DEFAULT_BUFFER_SIZE,
-    messageThreshold: DEFAULT_MESSAGE_THRESHOLD,
-    enabled: true,
-  };
-}
+    return {
+      summarizerModel: DEFAULT_MODEL,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      messageThreshold: DEFAULT_MESSAGE_THRESHOLD,
+      enabled: true,
+    };
+  }
 
 function buildSummarizerPrompt(entries: BufferEntry[], store: MemoryStore): string {
   const formatted = entries.map(e => `[${e.type}] (${e.time}): ${e.text}`).join("\n");
@@ -158,6 +158,13 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
   let messageCount = 0;
   let isSummarizing = false;
 
+  function getModelOverride(): { providerID: string; modelID: string } | undefined {
+    const modelStr = config.summarizerModel || DEFAULT_MODEL;
+    if (!modelStr || modelStr === DEFAULT_MODEL) return undefined;
+    const parts = modelStr.split("/", 2);
+    return { providerID: parts[0], modelID: parts[1] };
+  }
+
   async function shouldSummarizeNow(sessionID: string, directory: string): Promise<boolean> {
     if (!config.enabled) return false;
     if (isSummarizing) return false;
@@ -167,12 +174,11 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     try {
       const entries = buffer.getAll();
       const recent = entries.map(e => `[${e.type}] ${e.text.substring(0, 200)}`).join("\n");
-      const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
-
+      const modelOverride = getModelOverride();
       const response = await client.session.prompt({
         path: { id: sessionID },
         body: {
-          model: { providerID, modelID },
+          ...(modelOverride ? { model: modelOverride } : {}),
       tools: {},
       parts: [{ type: "text", text: `Is this conversation at a natural stopping point to summarize and extract key facts? Answer ONLY YES or NO.\n\n${recent}` }],
     },
@@ -192,14 +198,13 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     isSummarizing = true;
 
     try {
-      const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
       const entries = buffer.getAll();
       const prompt = buildSummarizerPrompt(entries, store);
-
+      const modelOverride = getModelOverride();
       const response = await client.session.prompt({
         path: { id: sessionID },
         body: {
-          model: { providerID, modelID },
+          ...(modelOverride ? { model: modelOverride } : {}),
           tools: {},
           parts: [{ type: "text", text: prompt }],
         },
@@ -329,11 +334,11 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         // LLM-extracted query for precision
         if (recentText && client) {
           try {
-            const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
+            const modelOverride = getModelOverride();
             const response = await client.session.prompt({
               path: { id: sessionID },
               body: {
-                model: { providerID, modelID },
+                ...(modelOverride ? { model: modelOverride } : {}),
                 tools: {},
                 parts: [{ type: "text", text: `Extract a focused keyword search query (max 10 words) from this conversation snippet. Return ONLY the query, no explanation:\n\n${recentText}` }],
               },
