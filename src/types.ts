@@ -109,3 +109,10 @@ export interface CompactionContext {
   sessionID: string;
   context: string[];
 }
+
+export interface HolographicMemoryConfig {
+  summarizerModel?: string;
+  bufferSize?: number;
+  messageThreshold?: number;
+  enabled?: boolean;
+}
