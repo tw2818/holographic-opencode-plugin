@@ -150,7 +150,7 @@ export class FactRetriever {
     const probeKey = bind(entityVec, roleEntity);
 
     // Step 4: Get facts and compute similarity scores
-    const facts = this.store.list_facts(undefined, 0.0, 100);
+    const facts = this.store.list_facts(category, 0.0, 100);
     if (facts.length === 0) {
       return [];
     }
