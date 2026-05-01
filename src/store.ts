@@ -222,9 +222,7 @@ export class MemoryStore {
     if (category) baseParams.push(category);
 
     if (trimmed) {
-      // Convert spaces to OR for FTS5 (matching original holographic-memory-plugin)
-      const ftsQuery = trimmed.replace(/\s+/g, " OR ");
-      const ftsParams = [ftsQuery, ...baseParams, minTrust, limit];
+      const ftsParams = [trimmed, ...baseParams, minTrust, limit];
 
       const ftsSql = `
         SELECT f.fact_id, f.content, f.category, f.tags, f.trust_score,
