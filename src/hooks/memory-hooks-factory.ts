@@ -179,16 +179,27 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     return true;
   }
 
-  async function triggerSummarization(sessionID: string, directory: string) {
+  async function triggerSummarization(parentSessionID: string, directory: string) {
     if (isSummarizing) return;
     isSummarizing = true;
 
+    let subSessionID: string | null = null;
+
     try {
+      // Create a dedicated sub-session so summarizer doesn't pollute main session
+      const createResult: any = await client.session.create({
+        body: { parentID: parentSessionID, title: "memory-summarizer" },
+        query: { directory },
+      });
+      subSessionID = createResult.data?.id;
+      if (!subSessionID) throw new Error("failed to create sub-session");
+
       const entries = buffer.getAll();
       const prompt = buildSummarizerPrompt(entries, store);
       const modelOverride = getModelOverride();
+
       const response = await client.session.prompt({
-        path: { id: sessionID },
+        path: { id: subSessionID },
         body: {
           ...(modelOverride ? { model: modelOverride } : {}),
           tools: {},
