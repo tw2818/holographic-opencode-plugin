@@ -214,51 +214,64 @@ export class MemoryStore {
     minTrust = MIN_TRUST_THRESHOLD,
     limit = 10
   ): Fact[] {
-    let sql = `
-      SELECT f.fact_id, f.content, f.category, f.tags, f.trust_score,
-             f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
-      FROM facts f
-    `;
+    let facts: Fact[] = [];
+    const trimmed = query?.trim() ?? "";
 
-    const params: (string | number)[] = [];
+    const categoryClause = category ? "AND f.category = ?" : "";
+    const baseParams: (string | number)[] = [];
+    if (category) baseParams.push(category);
 
-    if (category) {
-      sql += ` WHERE f.category = ?`;
-      params.push(category);
+    if (trimmed) {
+      // Convert spaces to OR for FTS5 (matching original holographic-memory-plugin)
+      const ftsQuery = trimmed.replace(/\s+/g, " OR ");
+      const ftsParams = [ftsQuery, ...baseParams, minTrust, limit];
+
+      const ftsSql = `
+        SELECT f.fact_id, f.content, f.category, f.tags, f.trust_score,
+               f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
+        FROM facts f
+        JOIN facts_fts fts ON f.fact_id = fts.rowid
+        WHERE facts_fts MATCH ?
+          ${categoryClause}
+          AND f.trust_score >= ?
+        ORDER BY fts.rank, f.trust_score DESC
+        LIMIT ?
+      `;
+
+      facts = this.db.prepare(ftsSql).all(...ftsParams) as Fact[];
     }
 
-    if (query && query.trim()) {
-      if (category) {
-        sql = `
-          SELECT f.fact_id, f.content, f.category, f.tags, f.trust_score,
-                 f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
-          FROM facts f
-          JOIN facts_fts fts ON f.fact_id = fts.rowid
-          WHERE facts_fts MATCH ? AND f.category = ?
-        `;
-        params.unshift(query, category);
-      } else {
-        sql = `
-          SELECT f.fact_id, f.content, f.category, f.tags, f.trust_score,
-                 f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
-          FROM facts f
-          JOIN facts_fts fts ON f.fact_id = fts.rowid
-          WHERE facts_fts MATCH ?
-        `;
-        params.unshift(query);
+    // LIKE fallback if FTS5 returns nothing (for Chinese and partial matches)
+    if (facts.length === 0 && trimmed) {
+      const likePattern = `%${trimmed}%`;
+      const likeParams = [likePattern, ...baseParams, minTrust, limit];
+
+      const likeSql = `
+        SELECT fact_id, content, category, tags, trust_score,
+               retrieval_count, helpful_count, created_at, updated_at
+        FROM facts
+        WHERE content LIKE ?
+          ${categoryClause}
+          AND trust_score >= ?
+        ORDER BY trust_score DESC
+        LIMIT ?
+      `;
+
+      facts = this.db.prepare(likeSql).all(...likeParams) as Fact[];
+    }
+
+    // Fallback: list facts filtered by category when no query
+    if (facts.length === 0 && !trimmed) {
+      facts = this.list_facts(category, minTrust, limit);
+    }
+
+    if (facts.length > 0) {
+      const updateRetrieval = this.db.prepare(
+        "UPDATE facts SET retrieval_count = retrieval_count + 1 WHERE fact_id = ?"
+      );
+      for (const fact of facts) {
+        updateRetrieval.run(fact.fact_id);
       }
-    }
-
-    sql += ` AND f.trust_score >= ? ORDER BY f.trust_score DESC LIMIT ?`;
-    params.push(minTrust, limit);
-
-    const facts = this.db.prepare(sql).all(...params) as Fact[];
-
-    const update_retrieval = this.db.prepare(
-      "UPDATE facts SET retrieval_count = retrieval_count + 1 WHERE fact_id = ?"
-    );
-    for (const fact of facts) {
-      update_retrieval.run(fact.fact_id);
     }
 
     return facts;
