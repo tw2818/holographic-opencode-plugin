@@ -1,4 +1,4 @@
-import { createHash, Hash } from "crypto";
+import { createHash } from "crypto";
 
 const TWO_PI = 2.0 * Math.PI;
 const DIM_DEFAULT = 1024;

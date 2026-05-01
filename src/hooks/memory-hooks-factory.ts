@@ -32,31 +32,13 @@ class CircularBuffer {
   clear() { this.entries = []; }
 }
 
-function parseConfig(input: PluginInput): SummarizerConfig {
-  const raw = ((input as any).config?.experimental?.holographicMemory ?? {}) as SummarizerConfig;
+function getConfig(): SummarizerConfig {
   return {
-    summarizerModel: raw?.summarizerModel ?? DEFAULT_MODEL,
-    bufferSize: raw?.bufferSize ?? DEFAULT_BUFFER_SIZE,
-    messageThreshold: raw?.messageThreshold ?? DEFAULT_MESSAGE_THRESHOLD,
-    enabled: raw?.enabled ?? false,
+    summarizerModel: DEFAULT_MODEL,
+    bufferSize: DEFAULT_BUFFER_SIZE,
+    messageThreshold: DEFAULT_MESSAGE_THRESHOLD,
+    enabled: true,
   };
-}
-
-function findSimilarFacts(store: MemoryStore, text: string, category: string): Fact[] {
-  const textVec = encode_text(text);
-  const candidates = store.list_facts(category, 0, 30);
-  const similar: Array<{ fact: Fact; sim: number }> = [];
-  
-  for (const fact of candidates) {
-    const factVec = encode_text(fact.content);
-    const sim = similarity(textVec, factVec);
-    if (sim > 0.3) {
-      similar.push({ fact, sim });
-    }
-  }
-  
-  similar.sort((a, b) => b.sim - a.sim);
-  return similar.slice(0, 5).map(s => s.fact);
 }
 
 function buildSummarizerPrompt(entries: BufferEntry[], store: MemoryStore): string {
@@ -168,7 +150,7 @@ function parseSummarizerResponse(text: string): { facts: Array<{ content: string
 }
 
 export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message" | "tool.execute.after" | "experimental.session.compacting"> {
-  const config = parseConfig(input);
+  const config = getConfig();
   const store = new MemoryStore();
   const client = input.client;
   const buffer = new CircularBuffer(config.bufferSize);
@@ -233,6 +215,8 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
                 if (action.old_id) {
                   store.record_feedback(action.old_id, true);
                 }
+                break;
+              case "keep_new":
                 break;
             }
           } catch {}
@@ -309,11 +293,13 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     },
 
     "tool.execute.after": async (execution) => {
-      buffer.push({
-        type: "tool",
-        text: `Tool ${execution.tool}: ${execution.args ? JSON.stringify(execution.args).substring(0, 300) : ""}`,
-        time: new Date().toISOString(),
-      });
+      try {
+        buffer.push({
+          type: "tool",
+          text: `Tool ${execution.tool}: ${execution.args ? JSON.stringify(execution.args).substring(0, 300) : ""}`,
+          time: new Date().toISOString(),
+        });
+      } catch {}
     },
 
     "experimental.session.compacting": async (compactionInput, output) => {
@@ -324,7 +310,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
 
       // Inject relevant memory into context
       try {
-        const facts = store.search_facts(sessionID, undefined, 0.3, 3);
+        const facts = store.list_facts(undefined, 0.3, 3);
         if (facts.length > 0) {
           output.context.push(
             `=== Relevant Memory ===\n${facts.map((f) => f.content).join("\n")}`

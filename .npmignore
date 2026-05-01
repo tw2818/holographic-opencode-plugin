@@ -1,8 +1,7 @@
 src/
-scripts/
 tsconfig.json
 *.ts
-!*.d.ts
+!.d.ts
 .git/
 .gitignore
 *.md
@@ -11,8 +10,6 @@ node_modules/
 dist/**/*.map
 .deploy/
 .env
+.opencode/
 *.log
 .DS_Store
-*.egg-info/
-__pycache__/
-*.pyc

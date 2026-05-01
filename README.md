@@ -6,7 +6,7 @@ Native OpenCode plugin for persistent memory with FTS5 full-text search and HRR 
 
 ## Features
 
-- **9 Memory Tools**: Search, store, forget, list, profile, probe, feedback, reason, contradict
+- **10 Memory Tools**: Search, store, forget, list, profile, probe, feedback, reason, contradict
 - **Background Summarizer**: LLM-powered auto-summarization of conversations
 - **HRR Algebra**: Semantic encoding with bind/unbind/bundle operations
 - **RRF Fusion**: FTS5 + Jaccard + HRR for hybrid retrieval

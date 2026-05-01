@@ -100,7 +100,8 @@ export class FactRetriever {
     ftsCandidates.forEach((fact, idx) => {
       const fts_rank = idx + 1;
       const jaccard = jaccardScores.get(fact.fact_id)!;
-      const hrr = hrrScores.get(fact.fact_id)!;
+      const hrr = hrrScores.get(fact.fact_id);
+      if (!hrr) return; // skip if no HRR vector
 
       // RRF formula: C / (rank + C)
       const rrfScore =
@@ -150,24 +151,14 @@ export class FactRetriever {
       return [];
     }
 
-    // Step 1: Get category memory bank vector
-    const bankResult = this.store.get_category_bank(category);
-    if (!bankResult) {
-      return [];
-    }
-    const bankVector = bankResult.vector;
-
-    // Step 2: Encode entity as HRR atom
+    // Step 1: Encode entity as HRR atom
     const entityVec = encode_atom(entity, DIM_DEFAULT);
 
     // Step 3: Create probe key by binding entity to ROLE_ENTITY
     const roleEntity = encode_atom(ROLE_ENTITY, DIM_DEFAULT);
     const probeKey = bind(entityVec, roleEntity);
 
-    // Step 4: Unbind from bank (extracted value follows algorithm but not directly used)
-    unbind(bankVector, probeKey);
-
-    // Step 5: Get facts in category and compute similarity scores
+    // Step 4: Get facts in category and compute similarity scores
     const facts = this.store.list_facts(category, 0.0, 100);
     if (facts.length === 0) {
       return [];

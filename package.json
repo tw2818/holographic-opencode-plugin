@@ -17,8 +17,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublish": "npm run build",
-    "install": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "npm run build"
   },
   "keywords": [
     "opencode",
@@ -29,6 +29,23 @@
   ],
   "author": "tw2818",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tw2818/holographic-opencode-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tw2818/holographic-opencode-plugin/issues"
+  },
+  "homepage": "https://github.com/tw2818/holographic-opencode-plugin#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "package.json"
+  ],
   "dependencies": {},
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.14.29"
