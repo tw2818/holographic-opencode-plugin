@@ -131,17 +131,16 @@ function parseSummarizerResponse(text: string): { facts: Array<{ content: string
   
   for (const [category, items] of Object.entries(parsed)) {
     if (category === "dedup") continue;
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        if (typeof item === "string" && item.trim().length > 0) {
-          results.push({ content: item.trim(), category, trust: 0.5 });
-        } else if (typeof item === "object" && item.content?.trim?.()) {
-          results.push({ 
-            content: item.content.trim(), 
-            category, 
-            trust: Math.min(1, Math.max(0, item.trust ?? 0.5)) 
-          });
-        }
+    const itemList = Array.isArray(items) ? items : [items];
+    for (const item of itemList) {
+      if (typeof item === "string" && item.trim().length > 0) {
+        results.push({ content: item.trim(), category, trust: 0.5 });
+      } else if (typeof item === "object" && item.content?.trim?.()) {
+        results.push({ 
+          content: item.content.trim(), 
+          category, 
+          trust: Math.min(1, Math.max(0, item.trust ?? 0.5)) 
+        });
       }
     }
   }
