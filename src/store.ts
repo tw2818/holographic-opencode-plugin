@@ -234,7 +234,7 @@ export class MemoryStore {
                  f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
           FROM facts f
           JOIN facts_fts fts ON f.fact_id = fts.rowid
-          WHERE fts MATCH ? AND f.category = ?
+          WHERE facts_fts MATCH ? AND f.category = ?
         `;
         params.unshift(query, category);
       } else {
@@ -243,7 +243,7 @@ export class MemoryStore {
                  f.retrieval_count, f.helpful_count, f.created_at, f.updated_at
           FROM facts f
           JOIN facts_fts fts ON f.fact_id = fts.rowid
-          WHERE fts MATCH ?
+          WHERE facts_fts MATCH ?
         `;
         params.unshift(query);
       }
