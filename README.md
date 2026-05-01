@@ -57,13 +57,15 @@ Optional config in `opencode.jsonc`:
 ```jsonc
 "experimental": {
   "holographicMemory": {
-    "summarizerModel": "minimax-cn/Minimax-M2.7-highspeed",
+    "summarizerModel": "minimax/MiniMax-M2.7-highspeed",
     "bufferSize": 20,
     "messageThreshold": 5,
     "enabled": true
   }
 }
 ```
+
+`summarizerModel` is optional — when not set, uses OpenCode's default model.
 
 ## Database
 

@@ -4,7 +4,6 @@ import { FactRetriever } from "../retriever.js";
 import { encode_text, similarity } from "../hrr.js";
 import type { Fact } from "../types.js";
 
-const DEFAULT_MODEL = "minimax/MiniMax-M2.7-highspeed";
 const DEFAULT_BUFFER_SIZE = 20;
 const DEFAULT_MESSAGE_THRESHOLD = 5;
 
@@ -35,7 +34,7 @@ class CircularBuffer {
 
 function getConfig(): SummarizerConfig {
     return {
-      summarizerModel: DEFAULT_MODEL,
+      summarizerModel: undefined,
       bufferSize: DEFAULT_BUFFER_SIZE,
       messageThreshold: DEFAULT_MESSAGE_THRESHOLD,
       enabled: true,
@@ -160,9 +159,12 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
 
   function getModelOverride(): { providerID: string; modelID: string } | undefined {
     if (!config.summarizerModel) return undefined;
-    const parts = config.summarizerModel.split("/", 2);
-    if (!parts[0] || !parts[1]) return undefined;
-    return { providerID: parts[0], modelID: parts[1] };
+    const p = config.summarizerModel.indexOf("/");
+    if (p <= 0) return undefined;
+    return {
+      providerID: config.summarizerModel.substring(0, p),
+      modelID: config.summarizerModel.substring(p + 1),
+    };
   }
 
   function shouldSummarizeNow(): boolean {
