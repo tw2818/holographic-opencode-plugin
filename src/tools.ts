@@ -215,3 +215,22 @@ export const memory_contradict: ToolDefinition = tool({
     }
   },
 });
+
+export const memory_decay: ToolDefinition = tool({
+  description: "Apply trust decay to stale facts that have never been retrieved.",
+  args: {
+    days_stale: tool.schema.number().optional().describe("Days since creation (default: 30)"),
+    decay_amount: tool.schema.number().optional().describe("Trust decay amount (default: -0.02)"),
+  },
+  async execute(args) {
+    try {
+      const changes = getStore().decay_trust(
+        args.days_stale ?? 30,
+        args.decay_amount ?? -0.02
+      );
+      return `Trust decay applied to ${changes} fact(s).`;
+    } catch (error) {
+      return `Decay error: ${error}`;
+    }
+  },
+});

@@ -128,6 +128,12 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         const facts = parseSummarizerResponse(answer);
         for (const { content, category } of facts) {
           try {
+            const conflictResults = store.search_facts(content, category, 0.3, 5);
+            for (const conflict of conflictResults) {
+              if (conflict.content !== content) {
+                try { store.record_feedback(conflict.fact_id, false); } catch {}
+              }
+            }
             store.add_fact(content, category, "auto-summarized");
           } catch {}
         }
