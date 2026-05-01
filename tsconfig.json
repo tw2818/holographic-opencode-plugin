@@ -7,7 +7,7 @@
     "types": ["node"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": false,
+    "declaration": true,
     "sourceMap": true,
     "strict": false,
     "esModuleInterop": true,

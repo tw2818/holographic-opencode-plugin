@@ -1,4 +1,4 @@
-import { tool } from "@opencode-ai/plugin";
+import { tool, type ToolDefinition } from "@opencode-ai/plugin";
 import { homedir } from "os";
 import { join } from "path";
 import { MemoryStore } from "./store.js";
@@ -17,7 +17,7 @@ function format_fact(f: Fact): string {
   return `[${f.fact_id}] (${f.category}, trust=${f.trust_score.toFixed(2)})\n  ${f.content}`;
 }
 
-export const memory_search = tool({
+export const memory_search: ToolDefinition = tool({
   description:
     "Search the user's persistent memory using holographic retrieval. " +
     "Use when user asks 'what do you remember', 'do you know about X', " +
@@ -43,7 +43,7 @@ export const memory_search = tool({
   },
 });
 
-export const memory_remember = tool({
+export const memory_remember: ToolDefinition = tool({
   description:
     "Store a fact in the user's persistent memory. " +
     "Use when user says 'remember that X', 'note that Y', 'I prefer Z'.",
@@ -62,7 +62,7 @@ export const memory_remember = tool({
   },
 });
 
-export const memory_forget = tool({
+export const memory_forget: ToolDefinition = tool({
   description: "Remove a fact from memory by ID.",
   args: {
     fact_id: tool.schema.number().describe("The fact ID to remove"),
@@ -77,7 +77,7 @@ export const memory_forget = tool({
   },
 });
 
-export const memory_list = tool({
+export const memory_list: ToolDefinition = tool({
   description: "List all facts in memory, optionally filtered by category.",
   args: {
     category: tool.schema.string().optional().describe("Category filter"),
@@ -99,7 +99,7 @@ export const memory_list = tool({
   },
 });
 
-export const memory_profile = tool({
+export const memory_profile: ToolDefinition = tool({
   description: "Get a comprehensive profile of the user from memory.",
   args: {
     categories: tool.schema.string().optional().describe("Comma-separated categories"),
@@ -128,7 +128,7 @@ export const memory_profile = tool({
   },
 });
 
-export const memory_probe = tool({
+export const memory_probe: ToolDefinition = tool({
   description:
     "HRR algebraic probe - find facts structurally bound to an entity.",
   args: {
@@ -171,7 +171,7 @@ export const memory_probe = tool({
   },
 });
 
-export const memory_feedback = tool({
+export const memory_feedback: ToolDefinition = tool({
   description: "Record feedback on a stored fact.",
   args: {
     fact_id: tool.schema.number().describe("The fact ID"),
@@ -187,7 +187,7 @@ export const memory_feedback = tool({
   },
 });
 
-export const memory_reason = tool({
+export const memory_reason: ToolDefinition = tool({
   description:
     "Multi-entity reasoning - find facts related to ALL specified entities.",
   args: {
@@ -223,7 +223,7 @@ export const memory_reason = tool({
   },
 });
 
-export const memory_contradict = tool({
+export const memory_contradict: ToolDefinition = tool({
   description: "Find potentially contradictory facts.",
   args: {
     category: tool.schema.string().optional().describe("Category filter"),

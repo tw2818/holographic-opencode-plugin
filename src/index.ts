@@ -15,7 +15,6 @@ import { memoryHooks } from "./hooks/memory-hooks.js";
 export * from "./tools.js";
 
 export const plugin: Plugin = async () => ({
-  name: "holographic-memory",
   tool: {
     memory_search,
     memory_remember,
