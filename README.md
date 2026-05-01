@@ -47,7 +47,7 @@ Plugin auto-installs via `opencode plugin` command. The database will be created
 ## Session Hooks
 
 - **Auto-Extract**: Detects "remember that X", "I prefer Y" patterns
-- **Background Summarizer**: Every 5 messages + completion signals, LLM auto-summarizes conversation
+- **Background Summarizer**: Triggers when conversation is user-led (≥5 messages, ≥2 user messages in last 3). Runs in isolated sub-session to not pollute main conversation.
 - **Compaction Context**: Injects relevant memory before session compaction
 
 ## Configuration
