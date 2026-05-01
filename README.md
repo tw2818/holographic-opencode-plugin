@@ -75,9 +75,8 @@ Schema:
 
 ## Requirements
 
-- Node.js 18+
-- SQLite 3.35+ (FTS5)
-- OpenCode AI
+- [OpenCode AI](https://opencode.ai) (provides Bun runtime)
+- SQLite with FTS5 support (included in Bun)
 
 ## License
 
