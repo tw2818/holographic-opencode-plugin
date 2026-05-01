@@ -326,34 +326,11 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
       const recentEntries = buffer.getAll().slice(-5);
       await triggerSummarization(sessionID, directory);
 
-      // Inject relevant memory into context
+      // Inject relevant memory via RRF retrieval
       try {
-        const recentText = recentEntries.map(e => e.text).join("\n");
-
-        let query = recentText;
-        // LLM-extracted query for precision
-        if (recentText && client) {
-          try {
-            const modelOverride = getModelOverride();
-            const response = await client.session.prompt({
-              path: { id: sessionID },
-              body: {
-                ...(modelOverride ? { model: modelOverride } : {}),
-                tools: {},
-                parts: [{ type: "text", text: `Extract a focused keyword search query (max 10 words) from this conversation snippet. Return ONLY the query, no explanation:\n\n${recentText}` }],
-              },
-              query: { directory },
-            });
-            const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
-            const extracted = textParts.map((p: any) => p.text).join("").trim();
-            if (extracted.length > 2 && extracted.length < 100) {
-              query = extracted;
-            }
-          } catch {}
-        }
-
+        const recentText = recentEntries.map(e => e.text).join(" ");
         const retriever = new FactRetriever(store);
-        const results = query ? retriever.search(query, undefined, 3) : [];
+        const results = recentText ? retriever.search(recentText, undefined, 3) : [];
         if (results.length > 0) {
           output.context.push(
             `=== Relevant Memory ===\n${results.map((r) => r.content).join("\n")}`
