@@ -288,7 +288,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
       }
 
       // Capture to buffer
-      const entryType = msgInput.agent === "user" ? "user" : "assistant";
+      const entryType = !msgInput.agent || msgInput.agent === "user" ? "user" : "assistant";
       buffer.push({
         type: entryType,
         text: text.substring(0, 500),
