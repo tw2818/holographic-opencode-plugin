@@ -304,9 +304,11 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     },
 
     "experimental.session.compacting": async (compactionInput, output) => {
-      // Trigger summarization before compaction (clear buffer)
       const sessionID = compactionInput.sessionID;
       const directory = (input as any).directory || process.cwd();
+      
+      // Snapshot buffer before summarization clears it
+      const recentEntries = buffer.getAll().slice(-5);
       await triggerSummarization(sessionID, directory);
 
       // Inject relevant memory into context
