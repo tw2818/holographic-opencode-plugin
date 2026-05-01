@@ -182,7 +182,7 @@ export class MemoryStore {
       .run(category, Buffer.from(vector_bytes), this.dim, facts.length);
   }
 
-  add_fact(content: string, category = "general", tags = ""): number {
+  add_fact(content: string, category = "general", tags = "", initialTrust = DEFAULT_TRUST): number {
     const existing = this.db.prepare("SELECT fact_id FROM facts WHERE content = ?").get(content) as
       | { fact_id: number }
       | undefined;
@@ -197,10 +197,10 @@ export class MemoryStore {
 
     const result = this.db
       .prepare(
-        `INSERT INTO facts (content, category, tags, hrr_vector)
-         VALUES (?, ?, ?, ?)`
+        `INSERT INTO facts (content, category, tags, hrr_vector, trust_score)
+         VALUES (?, ?, ?, ?, ?)`
       )
-      .run(content, category, tags, Buffer.from(vector_bytes));
+      .run(content, category, tags, Buffer.from(vector_bytes), Math.min(1, Math.max(0, initialTrust)));
 
     const fact_id = Number(result.lastInsertRowid);
 

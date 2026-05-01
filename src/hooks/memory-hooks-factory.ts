@@ -84,23 +84,37 @@ function buildSummarizerPrompt(entries: BufferEntry[], store: MemoryStore): stri
 Recent conversation:
 ${formatted}
 ${existingBlock}
-Analyze and extract:
-- lessons: what was learned, how things were done
-- facts: technical details, paths, commands, configs, file names
-- preferences: user likes/dislikes, naming preferences, interaction style
-- projects: project status, milestones, next steps, blockers
+Analyze, rewrite, and classify each fact:
+
+1. REWRITE each fact to be self-contained (no pronouns like "he", "it", "this" — replace with actual names/objects)
+2. CLASSIFY each fact into one category:
+   - "lessons": what was learned, how things were done
+   - "facts": technical details, paths, commands, configs, file names
+   - "preferences": user likes/dislikes, naming preferences, interaction style
+   - "projects": project status, milestones, next steps, blockers
+3. SCORE trust (0-1) for each fact:
+   - 0.8-1.0: user explicitly stated this
+   - 0.5-0.7: solid inference from conversation
+   - 0.2-0.4: weak inference, might be inaccurate
 
 Return ONLY valid JSON, no other text:
 {
-  "lessons": ["lesson1"],
-  "facts": ["fact1"],
-  "preferences": ["pref1"],
-  "projects": ["project1"],
+  "lessons": [
+    {"content": "rewritten fact", "trust": 0.7}
+  ],
+  "facts": [
+    {"content": "rewritten fact", "trust": 0.6}
+  ],
+  "preferences": [
+    {"content": "user prefers X", "trust": 0.9}
+  ],
+  "projects": [
+    {"content": "project Y status", "trust": 0.8}
+  ],
   "dedup": [
     {"action": "merge", "old_id": 5, "new_content": "merged fact text"},
     {"action": "replace", "old_id": 3, "reason": "why replacing"},
-    {"action": "keep_existing", "old_id": 8, "reason": "why keeping old"},
-    {"action": "keep_new", "reason": "why this is new info"}
+    {"action": "keep_existing", "old_id": 8, "reason": "why keeping old"}
   ]
 }
 
@@ -110,8 +124,6 @@ Dedup rules:
 - If new fact is genuinely new: just include it in facts array, no dedup needed
 - "merge": combine info from both → the new_content in dedup overrides what's in facts array
 - "replace": old fact is outdated → old fact will be downranked
-- "keep_existing": old fact is better → new fact will be discarded
-- "keep_new": explicitly mark as new (default behavior)
 
 Skip trivial/greeting messages. Only extract meaningful, reusable information.`;
 }
@@ -123,28 +135,39 @@ interface DedupAction {
   reason?: string;
 }
 
+interface SummarizerFact {
+  content: string;
+  trust?: number;
+}
+
 interface SummarizerOutput {
-  lessons?: string[];
-  facts?: string[];
-  preferences?: string[];
-  projects?: string[];
+  lessons?: SummarizerFact[];
+  facts?: SummarizerFact[];
+  preferences?: SummarizerFact[];
+  projects?: SummarizerFact[];
   dedup?: DedupAction[];
 }
 
-function parseSummarizerResponse(text: string): { facts: Array<{ content: string; category: string }>; dedup: DedupAction[] } {
+function parseSummarizerResponse(text: string): { facts: Array<{ content: string; category: string; trust: number }>; dedup: DedupAction[] } {
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
   if (!match) return { facts: [], dedup: [] };
   
   const parsed: SummarizerOutput = JSON.parse(match[0]);
-  const results: Array<{ content: string; category: string }> = [];
+  const results: Array<{ content: string; category: string; trust: number }> = [];
   
   for (const [category, items] of Object.entries(parsed)) {
     if (category === "dedup") continue;
     if (Array.isArray(items)) {
       for (const item of items) {
         if (typeof item === "string" && item.trim().length > 0) {
-          results.push({ content: item.trim(), category });
+          results.push({ content: item.trim(), category, trust: 0.5 });
+        } else if (typeof item === "object" && item.content?.trim?.()) {
+          results.push({ 
+            content: item.content.trim(), 
+            category, 
+            trust: Math.min(1, Math.max(0, item.trust ?? 0.5)) 
+          });
         }
       }
     }
@@ -224,9 +247,9 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
           } catch {}
         }
 
-        for (const { content, category } of facts) {
+        for (const { content, category, trust } of facts) {
           try {
-            store.add_fact(content, category, "auto-summarized");
+            store.add_fact(content, category, "auto-summarized", trust);
           } catch {}
         }
       }
