@@ -1,5 +1,7 @@
 import type { PluginInput, Hooks } from "@opencode-ai/plugin";
 import { MemoryStore } from "../store.js";
+import { encode_text, similarity } from "../hrr.js";
+import type { Fact } from "../types.js";
 
 const DEFAULT_MODEL = "minimax-cn/Minimax-M2.7-highspeed";
 const DEFAULT_BUFFER_SIZE = 20;
@@ -40,13 +42,48 @@ function parseConfig(input: PluginInput): SummarizerConfig {
   };
 }
 
-function buildSummarizerPrompt(entries: BufferEntry[]): string {
+function findSimilarFacts(store: MemoryStore, text: string, category: string): Fact[] {
+  const textVec = encode_text(text);
+  const candidates = store.list_facts(category, 0, 30);
+  const similar: Array<{ fact: Fact; sim: number }> = [];
+  
+  for (const fact of candidates) {
+    const factVec = encode_text(fact.content);
+    const sim = similarity(textVec, factVec);
+    if (sim > 0.3) {
+      similar.push({ fact, sim });
+    }
+  }
+  
+  similar.sort((a, b) => b.sim - a.sim);
+  return similar.slice(0, 5).map(s => s.fact);
+}
+
+function buildSummarizerPrompt(entries: BufferEntry[], store: MemoryStore): string {
   const formatted = entries.map(e => `[${e.type}] (${e.time}): ${e.text}`).join("\n");
+  
+  // Find existing similar facts that might conflict
+  const keyText = entries.map(e => e.text).join(" ");
+  const existingFacts = store.list_facts(undefined, 0.3, 20);
+  const relevantExisting = existingFacts
+    .map(f => ({ fact: f, sim: similarity(encode_text(keyText), encode_text(f.content)) }))
+    .filter(x => x.sim > 0.2)
+    .sort((a, b) => b.sim - a.sim)
+    .slice(0, 10);
+
+  let existingBlock = "";
+  if (relevantExisting.length > 0) {
+    existingBlock = "\nExisting stored facts that might overlap:\n" +
+      relevantExisting.map(({ fact, sim }) => 
+        `  [ID:${fact.fact_id}] (${fact.category}, trust:${fact.trust_score.toFixed(2)}, sim:${sim.toFixed(2)})\n    ${fact.content}`
+      ).join("\n") + "\n";
+  }
+
   return `You are a memory summarizer. Extract key information and return JSON.
 
 Recent conversation:
 ${formatted}
-
+${existingBlock}
 Analyze and extract:
 - lessons: what was learned, how things were done
 - facts: technical details, paths, commands, configs, file names
@@ -54,20 +91,56 @@ Analyze and extract:
 - projects: project status, milestones, next steps, blockers
 
 Return ONLY valid JSON, no other text:
-{"lessons": ["lesson1","lesson2"], "facts": ["fact1"], "preferences": ["pref1"], "projects": ["project1"]}
+{
+  "lessons": ["lesson1"],
+  "facts": ["fact1"],
+  "preferences": ["pref1"],
+  "projects": ["project1"],
+  "dedup": [
+    {"action": "merge", "old_id": 5, "new_content": "merged fact text"},
+    {"action": "replace", "old_id": 3, "reason": "why replacing"},
+    {"action": "keep_existing", "old_id": 8, "reason": "why keeping old"},
+    {"action": "keep_new", "reason": "why this is new info"}
+  ]
+}
+
+Dedup rules:
+- If new fact is identical to existing: DON'T include it in facts array, just add dedup entry with action "keep_existing"
+- If new fact updates old fact: DO include updated version in facts array, add dedup with action "merge" or "replace"
+- If new fact is genuinely new: just include it in facts array, no dedup needed
+- "merge": combine info from both → the new_content in dedup overrides what's in facts array
+- "replace": old fact is outdated → old fact will be downranked
+- "keep_existing": old fact is better → new fact will be discarded
+- "keep_new": explicitly mark as new (default behavior)
 
 Skip trivial/greeting messages. Only extract meaningful, reusable information.`;
 }
 
-function parseSummarizerResponse(text: string): Array<{ content: string; category: string }> {
+interface DedupAction {
+  action: "merge" | "replace" | "keep_existing" | "keep_new";
+  old_id?: number;
+  new_content?: string;
+  reason?: string;
+}
+
+interface SummarizerOutput {
+  lessons?: string[];
+  facts?: string[];
+  preferences?: string[];
+  projects?: string[];
+  dedup?: DedupAction[];
+}
+
+function parseSummarizerResponse(text: string): { facts: Array<{ content: string; category: string }>; dedup: DedupAction[] } {
   const cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) return [];
-
-  const parsed = JSON.parse(match[0]);
+  if (!match) return { facts: [], dedup: [] };
+  
+  const parsed: SummarizerOutput = JSON.parse(match[0]);
   const results: Array<{ content: string; category: string }> = [];
-
+  
   for (const [category, items] of Object.entries(parsed)) {
+    if (category === "dedup") continue;
     if (Array.isArray(items)) {
       for (const item of items) {
         if (typeof item === "string" && item.trim().length > 0) {
@@ -76,7 +149,8 @@ function parseSummarizerResponse(text: string): Array<{ content: string; categor
       }
     }
   }
-  return results;
+  
+  return { facts: results, dedup: parsed.dedup || [] };
 }
 
 export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message" | "tool.execute.after" | "experimental.session.compacting"> {
@@ -108,7 +182,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     try {
       const [providerID, modelID] = (config.summarizerModel || DEFAULT_MODEL).split("/", 2);
       const entries = buffer.getAll();
-      const prompt = buildSummarizerPrompt(entries);
+      const prompt = buildSummarizerPrompt(entries, store);
 
       const response = await client.session.prompt({
         path: { id: sessionID },
@@ -125,15 +199,33 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
       const answer = textParts.map((p: any) => p.text).join("");
 
       if (answer) {
-        const facts = parseSummarizerResponse(answer);
+        const { facts, dedup } = parseSummarizerResponse(answer);
+
+        for (const action of dedup) {
+          try {
+            switch (action.action) {
+              case "merge":
+                if (action.old_id) {
+                  store.update_fact(action.old_id, { content: action.new_content });
+                  store.record_feedback(action.old_id, true);
+                }
+                break;
+              case "replace":
+                if (action.old_id) {
+                  store.record_feedback(action.old_id, false);
+                }
+                break;
+              case "keep_existing":
+                if (action.old_id) {
+                  store.record_feedback(action.old_id, true);
+                }
+                break;
+            }
+          } catch {}
+        }
+
         for (const { content, category } of facts) {
           try {
-            const conflictResults = store.search_facts(content, category, 0.3, 5);
-            for (const conflict of conflictResults) {
-              if (conflict.content !== content) {
-                try { store.record_feedback(conflict.fact_id, false); } catch {}
-              }
-            }
             store.add_fact(content, category, "auto-summarized");
           } catch {}
         }

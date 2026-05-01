@@ -1,5 +1,5 @@
 import type { Fact } from "./types.js";
-import { encode_fact, encode_text, phases_to_bytes, bytes_to_phases, bundle, snr_estimate, similarity } from "./hrr.js";
+import { encode_fact, phases_to_bytes, bytes_to_phases, bundle, snr_estimate, similarity } from "./hrr.js";
 import { Database } from "bun:sqlite";
 import { mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
@@ -193,22 +193,6 @@ export class MemoryStore {
 
     const entities = this.extract_entities(content);
     const hrr_vector = encode_fact(content, entities, this.dim);
-
-    // Similar dedup via HRR - compare token-level text encoding
-    const contentVec = encode_text(content, this.dim);
-    const recentFacts = this.db.prepare(
-      "SELECT fact_id, content FROM facts WHERE category = ? ORDER BY created_at DESC LIMIT 20"
-    ).all(category) as { fact_id: number; content: string }[];
-
-    for (const existingFact of recentFacts) {
-      const existingVec = encode_text(existingFact.content, this.dim);
-      const sim = similarity(contentVec, existingVec);
-      if (sim > 0.35) {
-        this.db.run("UPDATE facts SET retrieval_count = retrieval_count + 1 WHERE fact_id = ?", [existingFact.fact_id]);
-        return existingFact.fact_id;
-      }
-    }
-
     const vector_bytes = phases_to_bytes(hrr_vector);
 
     const result = this.db
