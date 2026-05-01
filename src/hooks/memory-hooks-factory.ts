@@ -4,7 +4,7 @@ import { FactRetriever } from "../retriever.js";
 import { encode_text, similarity } from "../hrr.js";
 import type { Fact } from "../types.js";
 
-const DEFAULT_MODEL = "minimax-cn/Minimax-M2.7-highspeed";
+const DEFAULT_MODEL = "minimax/MiniMax-M2.7-highspeed";
 const DEFAULT_BUFFER_SIZE = 20;
 const DEFAULT_MESSAGE_THRESHOLD = 5;
 
