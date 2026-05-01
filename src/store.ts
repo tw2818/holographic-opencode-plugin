@@ -188,6 +188,9 @@ export class MemoryStore {
       | undefined;
 
     if (existing) {
+      if (tags) {
+        this.db.run("UPDATE facts SET tags = CASE WHEN tags = '' THEN ? ELSE tags || ',' || ? END WHERE fact_id = ?", [tags, tags, existing.fact_id]);
+      }
       return existing.fact_id;
     }
 
