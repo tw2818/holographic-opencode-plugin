@@ -5,7 +5,7 @@ import { encode_text, similarity } from "../hrr.js";
 import type { Fact } from "../types.js";
 
 const DEFAULT_BUFFER_SIZE = 20;
-const DEFAULT_MESSAGE_THRESHOLD = 5;
+const DEFAULT_MESSAGE_THRESHOLD = 10;
 
 interface BufferEntry {
   type: "user" | "assistant" | "tool" | "system";
