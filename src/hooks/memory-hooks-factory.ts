@@ -166,7 +166,7 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
     if (!config.enabled) return false;
     if (isSummarizing) return false;
     if (buffer.size() === 0) return false;
-    if (messageCount < (config.messageThreshold || 5)) return false;
+    if (messageCount < (config.messageThreshold || 10)) return false;
     return true;
   }
 
