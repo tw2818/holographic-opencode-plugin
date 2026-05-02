@@ -206,7 +206,8 @@ export function createMemoryHooks(input: PluginInput): Pick<Hooks, "chat.message
         query: { directory },
       });
 
-      const textParts = (response as any).parts?.filter((p: any) => p.type === "text") || [];
+      const responseData = (response as any).data;
+      const textParts = responseData?.parts?.filter((p: any) => p.type === "text") || [];
       const answer = textParts.map((p: any) => p.text).join("");
 
       if (answer) {
