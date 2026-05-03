@@ -47,7 +47,7 @@ Plugin auto-installs via `opencode plugin` command. The database will be created
 ## Session Hooks
 
 - **Auto-Extract**: Detects "remember that X", "I prefer Y" patterns
-- **Background Summarizer**: Triggers when conversation is user-led (≥5 messages, ≥2 user messages in last 3). Runs in isolated sub-session to not pollute main conversation.
+- **Background Summarizer**: Triggers every 10 messages in a dedicated sub-session.
 - **Compaction Context**: Injects relevant memory before session compaction
 
 ## Configuration
@@ -59,7 +59,7 @@ Optional config in `opencode.jsonc`:
   "holographicMemory": {
     "summarizerModel": "minimax/MiniMax-M2.7-highspeed",
     "bufferSize": 20,
-    "messageThreshold": 5,
+    "messageThreshold": 10,
     "enabled": true
   }
 }
